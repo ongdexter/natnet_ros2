@@ -417,6 +417,14 @@ void NatNetNode::process_frame(sFrameOfMocapData* data)
 
 void NatNetNode::process_rigid_body(sRigidBodyData &data)
 {
+    // Don't publish stale poses for rigid bodies Motive is not currently tracking
+    // (params bit 0 == bTrackingValid), so downstream odom timeouts can trigger.
+    if (!(data.params & 0x01))
+    {
+        RCLCPP_WARN_THROTTLE(get_logger(), *this->get_clock(), 1000,
+            "Rigid body %s not tracked", ListRigidBodies[data.ID].c_str());
+        return;
+    }
     geometry_msgs::msg::PoseStamped msgRigidBodyPose;
     msgRigidBodyPose.header.frame_id = global_frame;
     msgRigidBodyPose.header.stamp = remove_latency ? this->get_clock()->now()-frame_delay : this->get_clock()->now();
